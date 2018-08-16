@@ -26,13 +26,14 @@ def ReadParameters(args):
     return parameters
  
 def Main(parameters):
-    dest=parameters['output_directory']
-    retrieval_output = dest + "/retrieval/"
+    retrieval_output=parameters['output_directory']
     if not os.path.exists(retrieval_output):
         os.makedirs(retrieval_output)
     quantity=int(parameters['quantity'])
     start=int(parameters['start'])
     final=int(parameters['end'])
+    if not os.path.exists(retrieval_output):
+        os.makedirs(retrieval_output)
     download_random(retrieval_output, quantity, start, final)
             
 def download_random(source, quantity, start, final):
