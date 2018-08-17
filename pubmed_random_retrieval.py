@@ -22,59 +22,74 @@ def ReadParameters(args):
         parameters['quantity']=Config.get('MAIN', 'quantity')
         parameters['start']=Config.get('MAIN', 'start')
         parameters['end']=Config.get('MAIN', 'end')
-        parameters['output_directory']=Config.get('MAIN', 'output')
+        parameters['random_file']=Config.get('MAIN', 'random_file')
+        parameters['random_folder']=Config.get('MAIN', 'random_folder')
+        parameters['useLabel']=Config.get('MAIN', 'useLabel')
+        parameters['label']=Config.get('MAIN', 'label')
     return parameters
  
 def Main(parameters):
-    retrieval_output=parameters['output_directory']
-    if not os.path.exists(retrieval_output):
-        os.makedirs(retrieval_output)
+    random_folder=parameters['random_folder']
+    random_file=parameters['random_file']
     quantity=int(parameters['quantity'])
     start=int(parameters['start'])
     final=int(parameters['end'])
-    if not os.path.exists(retrieval_output):
-        os.makedirs(retrieval_output)
-    download_random(retrieval_output, quantity, start, final)
+    useLabel=parameters['useLabel']
+    label=parameters['label']
+    if not os.path.exists(random_folder):
+        os.makedirs(random_folder)
+    download_random(random_file, quantity, start, final, useLabel, label)
             
-def download_random(source, quantity, start, final):
-    print "Downloading " + str(quantity) + " pubmed random abstract, into " + source + " beginning from pmid"+str(start) + "pmid"+str(final)
+def download_random(random_file, quantity, start, final, useLabel, label):
+    print "Downloading " + str(quantity) + " pubmed random abstract, into " + random_file + " beginning from pmid"+str(start) + "pmid"+str(final)
     conn = httplib.HTTPSConnection("eutils.ncbi.nlm.nih.gov")
     i=0
     articles_ids=[]
-    while (i<quantity):
-        try:
-            randomId=randint(start, final)
-            randomId=str(randomId)
-            params = urllib.urlencode({'db':'pubmed','retmode':'xml','id':'PMID'+randomId})
-            conn.request("POST", "/entrez/eutils/efetch.fcgi", params )
-            rf = conn.getresponse()
-            if not rf.status == 200 :
-                print "Error en la conexion: " + rf.status + " " + rf.reason 
-                exit()
-            response_efetch = rf.read()
-            doc_xml = ET.fromstring(response_efetch) 
-            article = doc_xml.find("PubmedArticle")
-            if(article!=None):
-                medline = article.find("MedlineCitation")
-                article_xml = medline.find("Article")
-                abstract_xml = article_xml.find("Abstract")
-                if(abstract_xml!=None):
-                    #abstract_text = abstract_xml.find("AbstractText").text
-                    i=i+1
-                    #print abstract_text
-                    print str(i) + " from " +  str(quantity)
-                    xml_file=codecs.open(source+"/PMID"+randomId+".xml",'w')
-                    xml_file.write(response_efetch)
-                    xml_file.flush()
-                    xml_file.close()
-                    articles_ids.append(randomId)
-            rf.close()
-            conn.close()
-        except Exception as inst:
-            print "Error Downloading " + randomId
-            print inst
-    thefile = open(source+'pmids.txt', 'w')
-    for item in articles_ids:
-        thefile.write("%s\n" % item)   
+    with open(random_file+"_id_list.txt",'w') as pmid_list_file:
+        with codecs.open(random_file,'w',encoding='utf8') as txt_file:
+            while (i<quantity):
+                try:
+                    randomId=randint(start, final)
+                    randomId=str(randomId)
+                    params = urllib.urlencode({'db':'pubmed','retmode':'xml','id':'PMID'+randomId})
+                    conn.request("POST", "/entrez/eutils/efetch.fcgi", params )
+                    rf = conn.getresponse()
+                    if not rf.status == 200 :
+                        print "Error en la conexion: " + rf.status + " " + rf.reason 
+                        exit()
+                    response_efetch = rf.read()
+                    doc_xml = ET.fromstring(response_efetch) 
+                    article = doc_xml.find("PubmedArticle")
+                    if(article!=None):
+                        pmid = article.find("MedlineCitation").find("PMID").text
+                        art_txt = label + "\t" + pmid + "\t"    
+                        article_xml = article.find("MedlineCitation").find("Article")
+                        abstract_xml = article_xml.find("Abstract")
+                        if(abstract_xml!=None):
+                            title_xml=article_xml.find("ArticleTitle")
+                            if(title_xml!=None):
+                                title = title_xml.text
+                                if(title!=None):
+                                    art_txt = art_txt + title.replace("\n"," ").replace("\t"," ").replace("\r"," ") + "\t" 
+                                else:
+                                    art_txt = art_txt + " " + "\t"     
+                                abstract_xml = article_xml.find("Abstract")
+                                if(abstract_xml!=None):
+                                    abstract_text = abstract_xml.find("AbstractText")
+                                    if(abstract_text!=None):
+                                        abstract=abstract_text.text
+                                        if(abstract!=None):
+                                            art_txt = art_txt + abstract.replace("\n"," ").replace("\t"," ").replace("\r"," ") + "\n" 
+                                            txt_file.write(art_txt)
+                                            txt_file.flush()
+                                            i=i+1
+                                            pmid_list_file.write(pmid+"\n")
+                                            pmid_list_file.flush()
+                    rf.close()
+                    conn.close()
+                except Exception as inst:
+                    print "Error Downloading " + randomId
+                    print inst
+     
         
     
