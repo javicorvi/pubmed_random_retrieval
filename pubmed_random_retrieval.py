@@ -1,15 +1,26 @@
-
 import os
+import sys
 import argparse
 import ConfigParser
 import xml.etree.ElementTree as ET
 from random import randint
 import httplib, urllib
 import codecs
+import logging
+import time
+
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+
+'''
+Parameters configuration
+'''
+
 parser=argparse.ArgumentParser()
 parser.add_argument('-p', help='Path Parameters')
 args=parser.parse_args()
 parameters={}
+
+
 if __name__ == '__main__':
     import pubmed_random_retrieval
     parameters = pubmed_random_retrieval.ReadParameters(args)     
@@ -26,6 +37,9 @@ def ReadParameters(args):
         parameters['random_folder']=Config.get('MAIN', 'random_folder')
         parameters['useLabel']=Config.get('MAIN', 'useLabel')
         parameters['label']=Config.get('MAIN', 'label')
+    else:
+        logging.error("Please send the correct parameters config.properties --help ")
+        sys.exit(1)
     return parameters
  
 def Main(parameters):
@@ -41,21 +55,21 @@ def Main(parameters):
     download_random(random_file, quantity, start, final, useLabel, label)
             
 def download_random(random_file, quantity, start, final, useLabel, label):
-    print "Downloading " + str(quantity) + " pubmed random abstract, into " + random_file + " beginning from pmid"+str(start) + "pmid"+str(final)
+    logging.info("Downloading " + str(quantity) + " pubmed random abstract, into " + random_file + " beginning from pmid: "+str(start) + " to pmid: "+str(final))
     conn = httplib.HTTPSConnection("eutils.ncbi.nlm.nih.gov")
     i=0
-    articles_ids=[]
     with open(random_file+"_id_list.txt",'w') as pmid_list_file:
         with codecs.open(random_file,'w',encoding='utf8') as txt_file:
             while (i<quantity):
                 try:
+                    time.sleep(0.1)
                     randomId=randint(start, final)
                     randomId=str(randomId)
                     params = urllib.urlencode({'db':'pubmed','retmode':'xml','id':'PMID'+randomId})
                     conn.request("POST", "/entrez/eutils/efetch.fcgi", params )
                     rf = conn.getresponse()
                     if not rf.status == 200 :
-                        print "Error en la conexion: " + rf.status + " " + rf.reason 
+                        logging.error("Error en la conexion:   "  + rf.status + " " + rf.reason)
                         exit()
                     response_efetch = rf.read()
                     doc_xml = ET.fromstring(response_efetch) 
@@ -88,8 +102,10 @@ def download_random(random_file, quantity, start, final, useLabel, label):
                     rf.close()
                     conn.close()
                 except Exception as inst:
-                    print "Error Downloading " + randomId
-                    print inst
-     
+                    logging.error("Error Downloading  " + randomId)
+                    logging.error("Error Downloading  " + inst)
+        txt_file.close()
+    pmid_list_file.close()
+    logging.info("Download End ")
         
     
