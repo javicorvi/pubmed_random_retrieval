@@ -37,6 +37,7 @@ def ReadParameters(args):
         parameters['random_folder']=Config.get('MAIN', 'random_folder')
         parameters['useLabel']=Config.get('MAIN', 'useLabel')
         parameters['label']=Config.get('MAIN', 'label')
+        parameters['pubmed_api_key']=Config.get('MAIN', 'pubmed_api_key')
     else:
         logging.error("Please send the correct parameters config.properties --help ")
         sys.exit(1)
@@ -50,11 +51,12 @@ def Main(parameters):
     final=int(parameters['end'])
     useLabel=parameters['useLabel']
     label=parameters['label']
+    pubmed_api_key=parameters['pubmed_api_key']
     if not os.path.exists(random_folder):
         os.makedirs(random_folder)
-    download_random(random_file, quantity, start, final, useLabel, label)
+    download_random(random_file, quantity, start, final, useLabel, label, pubmed_api_key)
             
-def download_random(random_file, quantity, start, final, useLabel, label):
+def download_random(random_file, quantity, start, final, useLabel, label, pubmed_api_key):
     logging.info("Downloading " + str(quantity) + " pubmed random abstract, into " + random_file + " beginning from pmid: "+str(start) + " to pmid: "+str(final))
     conn = httplib.HTTPSConnection("eutils.ncbi.nlm.nih.gov")
     i=0
@@ -62,10 +64,10 @@ def download_random(random_file, quantity, start, final, useLabel, label):
         with codecs.open(random_file,'w',encoding='utf8') as txt_file:
             while (i<quantity):
                 try:
-                    time.sleep(0.1)
+                    #time.sleep(0.1)
                     randomId=randint(start, final)
                     randomId=str(randomId)
-                    params = urllib.urlencode({'db':'pubmed','retmode':'xml','id':'PMID'+randomId})
+                    params = urllib.urlencode({'db':'pubmed','retmode':'xml','id':'PMID'+randomId,'api_key':pubmed_api_key})
                     conn.request("POST", "/entrez/eutils/efetch.fcgi", params )
                     rf = conn.getresponse()
                     if not rf.status == 200 :
