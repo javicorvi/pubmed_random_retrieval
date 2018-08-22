@@ -58,16 +58,17 @@ def Main(parameters):
             
 def download_random(random_file, quantity, start, final, useLabel, label, pubmed_api_key):
     logging.info("Downloading " + str(quantity) + " pubmed random abstract, into " + random_file + " beginning from pmid: "+str(start) + " to pmid: "+str(final))
-    conn = httplib.HTTPSConnection("eutils.ncbi.nlm.nih.gov")
+    
     i=0
-    with open(random_file+"_id_list.txt",'w') as pmid_list_file:
-        with codecs.open(random_file,'w',encoding='utf8') as txt_file:
+    with open(random_file+"_id_list.txt",'a') as pmid_list_file:
+        with codecs.open(random_file,'a',encoding='utf8') as txt_file:
             while (i<quantity):
                 try:
-                    #time.sleep(0.1)
+                    time.sleep(0.1)
                     randomId=randint(start, final)
                     randomId=str(randomId)
                     params = urllib.urlencode({'db':'pubmed','retmode':'xml','id':'PMID'+randomId,'api_key':pubmed_api_key})
+                    conn = httplib.HTTPSConnection("eutils.ncbi.nlm.nih.gov")
                     conn.request("POST", "/entrez/eutils/efetch.fcgi", params )
                     rf = conn.getresponse()
                     if not rf.status == 200 :
@@ -105,7 +106,7 @@ def download_random(random_file, quantity, start, final, useLabel, label, pubmed
                     conn.close()
                 except Exception as inst:
                     logging.error("Error Downloading  " + randomId)
-                    logging.error("Error Downloading  " + inst)
+                    #logging.error("Error Downloading  " + inst)
         txt_file.close()
     pmid_list_file.close()
     logging.info("Download End ")
