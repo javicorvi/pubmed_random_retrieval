@@ -7,7 +7,6 @@ from random import randint
 import httplib, urllib
 import codecs
 import logging
-import time
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
@@ -58,13 +57,12 @@ def Main(parameters):
             
 def download_random(random_file, quantity, start, final, useLabel, label, pubmed_api_key):
     logging.info("Downloading " + str(quantity) + " pubmed random abstract, into " + random_file + " beginning from pmid: "+str(start) + " to pmid: "+str(final))
-    
     i=0
     with open(random_file+"_id_list.txt",'a') as pmid_list_file:
-        with codecs.open(random_file,'a',encoding='utf8') as txt_file:
+        with codecs.open(random_file,'a',encoding='utf-8') as txt_file:
             while (i<quantity):
                 try:
-                    time.sleep(0.1)
+                    #time.sleep(0.1)
                     randomId=randint(start, final)
                     randomId=str(randomId)
                     params = urllib.urlencode({'db':'pubmed','retmode':'xml','id':'PMID'+randomId,'api_key':pubmed_api_key})
@@ -86,19 +84,44 @@ def download_random(random_file, quantity, start, final, useLabel, label, pubmed
                             title_xml=article_xml.find("ArticleTitle")
                             if(title_xml!=None):
                                 title = title_xml.text
-                                if(title!=None):
-                                    art_txt = art_txt + title.replace("\n"," ").replace("\t"," ").replace("\r"," ") + "\t" 
+                                if(title==None):
+                                    title=""
+                                for child in title_xml:
+                                    if(child.text!=None):
+                                        title = title + child.text
+                                    if(child.tail!=None):    
+                                        title = title + child.tail
+                                    #print abstract
+                                if(title!=""):
+                                    art_txt = art_txt + remove_invalid_characters(title) + "\t" 
                                 else:
                                     art_txt = art_txt + " " + "\t"     
                                 abstract_xml = article_xml.find("Abstract")
                                 if(abstract_xml!=None):
                                     abstract_text = abstract_xml.find("AbstractText")
                                     if(abstract_text!=None):
-                                        abstract=abstract_text.text
-                                        if(abstract!=None):
-                                            art_txt = art_txt + abstract.replace("\n"," ").replace("\t"," ").replace("\r"," ") + "\n" 
+                                        #abstract = getText(abstract_text)
+                                        abstract = abstract_text.text
+                                        if(abstract==None):
+                                            abstract=""
+                                        for child in abstract_text:
+                                            if(child.text!=None):
+                                                abstract = abstract + child.text
+                                            for child2 in child:
+                                                logging.debug("This abstract has html tags anidated review " + pmid)
+                                                if(child2.text!=None):
+                                                    abstract = abstract + child2.text
+                                                if(child2.tail!=None):    
+                                                    abstract = abstract + child2.tail   
+                                            if(child.tail!=None):    
+                                                abstract = abstract + child.tail
+                                        #print abstract
+                                        if(abstract!=""):
+                                            art_txt = art_txt + remove_invalid_characters(abstract) + "\n" 
                                             txt_file.write(art_txt)
                                             txt_file.flush()
+                                            #print art_txt
+                                            #logging.debug(pmid)
                                             i=i+1
                                             pmid_list_file.write(pmid+"\n")
                                             pmid_list_file.flush()
@@ -110,5 +133,22 @@ def download_random(random_file, quantity, start, final, useLabel, label, pubmed
         txt_file.close()
     pmid_list_file.close()
     logging.info("Download End ")
-        
-    
+      
+def remove_invalid_characters(text):
+    text = text.replace("\n"," ").replace("\t"," ").replace("\r"," ")    
+    return text
+
+'''
+def getText(tag):
+    text = tag.text
+    if(text==None):
+        text=""
+    for child in tag:
+      if(child.text!=None):
+            text = text + child.text
+        if(child.tail!=None):    
+            text = text + child.tail 
+        text =  getText(child)  
+        if(child.tail!=None):    
+            text = text + child.tail    
+'''            
