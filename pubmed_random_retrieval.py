@@ -82,49 +82,23 @@ def download_random(random_file, quantity, start, final, useLabel, label, pubmed
                         abstract_xml = article_xml.find("Abstract")
                         if(abstract_xml!=None):
                             title_xml=article_xml.find("ArticleTitle")
-                            if(title_xml!=None):
-                                title = title_xml.text
-                                if(title==None):
-                                    title=""
-                                for child in title_xml:
-                                    if(child.text!=None):
-                                        title = title + child.text
-                                    if(child.tail!=None):    
-                                        title = title + child.tail
-                                    #print abstract
-                                if(title!=""):
-                                    art_txt = art_txt + remove_invalid_characters(title) + "\t" 
-                                else:
-                                    art_txt = art_txt + " " + "\t"     
-                                abstract_xml = article_xml.find("Abstract")
-                                if(abstract_xml!=None):
-                                    abstract_text = abstract_xml.find("AbstractText")
-                                    if(abstract_text!=None):
-                                        #abstract = getText(abstract_text)
-                                        abstract = abstract_text.text
-                                        if(abstract==None):
-                                            abstract=""
-                                        for child in abstract_text:
-                                            if(child.text!=None):
-                                                abstract = abstract + child.text
-                                            for child2 in child:
-                                                logging.debug("This abstract has html tags anidated review " + pmid)
-                                                if(child2.text!=None):
-                                                    abstract = abstract + child2.text
-                                                if(child2.tail!=None):    
-                                                    abstract = abstract + child2.tail   
-                                            if(child.tail!=None):    
-                                                abstract = abstract + child.tail
-                                        #print abstract
-                                        if(abstract!=""):
-                                            art_txt = art_txt + remove_invalid_characters(abstract) + "\n" 
-                                            txt_file.write(art_txt)
-                                            txt_file.flush()
-                                            #print art_txt
-                                            #logging.debug(pmid)
-                                            i=i+1
-                                            pmid_list_file.write(pmid+"\n")
-                                            pmid_list_file.flush()
+                            title = readTitle(title_xml)
+                            if(title!=""):
+                                art_txt = art_txt + remove_invalid_characters(title) + "\t" 
+                            else:
+                                art_txt = art_txt + " " + "\t"     
+                            abstract_xml = article_xml.find("Abstract")
+                            abstract = readAbstract(abstract_xml)
+                            art_txt = art_txt + remove_invalid_characters(abstract) + "\n"
+                            data=art_txt.split('\t')
+                            if(len(data)==4):
+                                txt_file.write(art_txt)
+                                txt_file.flush()
+                                pmid_list_file.write(pmid+"\n")
+                                pmid_list_file.flush()
+                            else:
+                                logging.error("Error Downloading  " + pmid + ". The document does not have a well tabulation format. The line: ")
+                                logging.error(art_txt)
                     rf.close()
                     conn.close()
                 except Exception as inst:
@@ -138,17 +112,42 @@ def remove_invalid_characters(text):
     text = text.replace("\n"," ").replace("\t"," ").replace("\r"," ")    
     return text
 
-'''
-def getText(tag):
-    text = tag.text
-    if(text==None):
-        text=""
-    for child in tag:
-      if(child.text!=None):
-            text = text + child.text
-        if(child.tail!=None):    
-            text = text + child.tail 
-        text =  getText(child)  
-        if(child.tail!=None):    
-            text = text + child.tail    
-'''            
+def readTitle(title_xml):
+    if(title_xml!=None):
+        title=''.join(itertext_title(title_xml))
+        return title
+    return ''
+def readAbstract(abstract_xml):
+    if(abstract_xml!=None):
+        abstract = ''.join(itertext_abstract(abstract_xml))
+        return abstract 
+    return ''
+def itertext_title(self):
+    tag = self.tag
+    if not isinstance(tag, str) and tag is not None:
+        return
+    if self.text:
+        yield self.text.strip()
+    for e in self:
+        for s in e.itertext():
+            yield s.strip()
+        if e.tail:
+            yield e.tail.strip()
+            
+def itertext_abstract(self):
+    tag = self.tag
+    if not isinstance(tag, str) and tag is not None:
+        return
+    if self.text:
+        yield self.text.strip()
+        for e in self:
+            tag2=e.tag
+            if isinstance(tag2, str) and tag2 is not None and tag2 in ['AbstractText']: 
+                for s in e.itertext():
+                    yield s.strip()
+                if e.tail:
+                    yield e.tail.strip()
+            elif tag2 not in ['CopyrightInformation']:
+                print tag2        
+    else:
+        print "no text"    
