@@ -80,7 +80,8 @@ def download_random(random_file, quantity, start, final, useLabel, label, pubmed
                         art_txt = label + "\t" + pmid + "\t"    
                         article_xml = article.find("MedlineCitation").find("Article")
                         abstract_xml = article_xml.find("Abstract")
-                        if(abstract_xml!=None):
+                        abstract = readAbstract(abstract_xml)
+                        if(abstract!=''):
                             title_xml=article_xml.find("ArticleTitle")
                             title = readTitle(title_xml)
                             if(title!=""):
@@ -88,7 +89,6 @@ def download_random(random_file, quantity, start, final, useLabel, label, pubmed
                             else:
                                 art_txt = art_txt + " " + "\t"     
                             abstract_xml = article_xml.find("Abstract")
-                            abstract = readAbstract(abstract_xml)
                             art_txt = art_txt + remove_invalid_characters(abstract) + "\n"
                             data=art_txt.split('\t')
                             if(len(data)==4):
